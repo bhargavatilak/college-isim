@@ -25,50 +25,66 @@ const DEFAULT_DETAILS = {
 export const UniversityDetails: React.FC = () => {
     const [isEditing, setIsEditing] = useState(false);
     const [savedMessage, setSavedMessage] = useState(false);
+    const [loading, setLoading] = useState(true);
 
-    const [details, setDetails] = useState(() => {
-        const saved = localStorage.getItem('university_details');
-        if (saved) {
-            try {
-                return { ...DEFAULT_DETAILS, ...JSON.parse(saved) };
-            } catch (e) {
-                console.error('Failed to parse local university details:', e);
-            }
-        }
-        return DEFAULT_DETAILS;
-    });
-
-    const [backupDetails, setBackupDetails] = useState(details);
+    const [details, setDetails] = useState(DEFAULT_DETAILS);
+    const [backupDetails, setBackupDetails] = useState(DEFAULT_DETAILS);
 
     useEffect(() => {
         const fetchDetails = async () => {
             try {
+                setLoading(true);
                 const { data, error } = await supabase.from('university_affiliations').select('*').limit(1).maybeSingle();
                 if (data && !error) {
                     const fetchedDetails = {
-                        id: data.id || details.id || 1,
-                        name: data.name || data.university_name || details.name,
-                        code: data.code || data.university_code || details.code,
-                        established: data.established || data.established_year || details.established,
-                        type: data.type || data.institution_type || details.type,
-                        accreditation: data.accreditation || details.accreditation,
-                        viceChancellor: data.viceChancellor || data.vice_chancellor || details.viceChancellor,
-                        registrar: data.registrar || details.registrar,
-                        address: data.address || details.address,
-                        city: data.city || details.city,
-                        state: data.state || details.state,
-                        zip: data.zip || details.zip,
-                        phone: data.phone || details.phone,
-                        email: data.email || details.email,
-                        website: data.website || details.website,
-                        affiliationStatus: data.affiliationStatus || data.affiliation_status || data.status || details.affiliationStatus,
-                        validUntil: data.validUntil || data.valid_until || details.validUntil
+                        id: data.id || 1,
+                        name: data.name || data.university_name || DEFAULT_DETAILS.name,
+                        code: data.code || data.university_code || DEFAULT_DETAILS.code,
+                        established: data.established || data.established_year || DEFAULT_DETAILS.established,
+                        type: data.type || data.institution_type || DEFAULT_DETAILS.type,
+                        accreditation: data.accreditation || DEFAULT_DETAILS.accreditation,
+                        viceChancellor: data.viceChancellor || data.vice_chancellor || DEFAULT_DETAILS.viceChancellor,
+                        registrar: data.registrar || DEFAULT_DETAILS.registrar,
+                        address: data.address || DEFAULT_DETAILS.address,
+                        city: data.city || DEFAULT_DETAILS.city,
+                        state: data.state || DEFAULT_DETAILS.state,
+                        zip: data.zip || DEFAULT_DETAILS.zip,
+                        phone: data.phone || DEFAULT_DETAILS.phone,
+                        email: data.email || DEFAULT_DETAILS.email,
+                        website: data.website || DEFAULT_DETAILS.website,
+                        affiliationStatus: data.affiliationStatus || data.affiliation_status || data.status || DEFAULT_DETAILS.affiliationStatus,
+                        validUntil: data.validUntil || data.valid_until || DEFAULT_DETAILS.validUntil
                     };
                     setDetails(fetchedDetails);
-                    localStorage.setItem('university_details', JSON.stringify(fetchedDetails));
+                } else if (!data) {
+                    // Seed initial row into Supabase if empty
+                    const initialPayload = {
+                        id: 1,
+                        university_name: DEFAULT_DETAILS.name,
+                        status: DEFAULT_DETAILS.affiliationStatus,
+                        name: DEFAULT_DETAILS.name,
+                        code: DEFAULT_DETAILS.code,
+                        established: DEFAULT_DETAILS.established,
+                        type: DEFAULT_DETAILS.type,
+                        accreditation: DEFAULT_DETAILS.accreditation,
+                        vice_chancellor: DEFAULT_DETAILS.viceChancellor,
+                        registrar: DEFAULT_DETAILS.registrar,
+                        address: DEFAULT_DETAILS.address,
+                        city: DEFAULT_DETAILS.city,
+                        state: DEFAULT_DETAILS.state,
+                        zip: DEFAULT_DETAILS.zip,
+                        phone: DEFAULT_DETAILS.phone,
+                        email: DEFAULT_DETAILS.email,
+                        website: DEFAULT_DETAILS.website,
+                        valid_until: DEFAULT_DETAILS.validUntil
+                    };
+                    await supabase.from('university_affiliations').upsert([initialPayload]);
+                    setDetails(DEFAULT_DETAILS);
                 }
             } catch (e) {
-                console.warn('Supabase fetch notice:', e);
+                console.error('Error loading university details from Supabase:', e);
+            } finally {
+                setLoading(false);
             }
         };
         fetchDetails();
@@ -85,13 +101,6 @@ export const UniversityDetails: React.FC = () => {
     };
 
     const handleSave = async () => {
-        setIsEditing(false);
-        // Persist to local storage immediately
-        localStorage.setItem('university_details', JSON.stringify(details));
-        setSavedMessage(true);
-        setTimeout(() => setSavedMessage(false), 4000);
-
-        // Attempt background persistence to Supabase
         try {
             const payload = {
                 id: details.id || 1,
@@ -114,11 +123,13 @@ export const UniversityDetails: React.FC = () => {
                 valid_until: details.validUntil
             };
             const { error } = await supabase.from('university_affiliations').upsert([payload]);
-            if (error) {
-                console.warn('Supabase save note:', error.message);
-            }
-        } catch (err) {
-            console.warn('Supabase connection note:', err);
+            if (error) throw error;
+
+            setIsEditing(false);
+            setSavedMessage(true);
+            setTimeout(() => setSavedMessage(false), 4000);
+        } catch (err: any) {
+            alert('Error saving details to Supabase: ' + err.message);
         }
     };
 
@@ -134,7 +145,7 @@ export const UniversityDetails: React.FC = () => {
             {savedMessage && (
                 <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 rounded-lg flex items-center gap-2 shadow-sm animate-fade-in">
                     <Check className="text-emerald-600 shrink-0" size={20} />
-                    <span className="font-medium">University details updated and saved successfully!</span>
+                    <span className="font-medium">University details saved directly to Supabase!</span>
                 </div>
             )}
 
