@@ -443,3 +443,4 @@ export const UniversityDetails: React.FC = () => {
         </div>
     );
 };
+

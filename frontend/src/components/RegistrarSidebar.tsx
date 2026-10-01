@@ -133,7 +133,6 @@ const navItems: NavItem[] = [
         subItems: [
             { name: 'Departments', path: '/registrar/institution/departments' },
             { name: 'Programs', path: '/registrar/institution/programs' },
-            { name: 'Subjects', path: '/registrar/institution/subjects' },
             { name: 'Academic Years', path: '/registrar/institution/academic-years' },
             { name: 'Semesters', path: '/registrar/institution/semesters' },
             { name: 'Sections', path: '/registrar/institution/sections' },
